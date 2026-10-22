@@ -571,6 +571,37 @@
                 throw new Error(errData.error || `Server responded with ${response.status}`);
             }
 
+            function updateMessageMeta(targetMetaEl, content) {
+                if (!targetMetaEl) return;
+                const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                targetMetaEl.innerHTML = `
+                    <span>${escapeHtml(state.activeModelName)}</span>
+                    <span>•</span>
+                    <span>${timeString}</span>
+                    <div class="message-actions">
+                        <button class="msg-action-btn copy-msg-btn" title="Copy text" aria-label="Copy message text">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                        <button class="msg-action-btn speak-msg-btn" title="Read aloud" aria-label="Read message aloud">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </button>
+                    </div>
+                `;
+                const copyBtn = targetMetaEl.querySelector('.copy-msg-btn');
+                if (copyBtn) {
+                    copyBtn.onclick = () => {
+                        navigator.clipboard.writeText(content);
+                        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                        showToast('Copied to clipboard', 'success');
+                        setTimeout(() => { copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>'; }, 2000);
+                    };
+                }
+                const speakBtn = targetMetaEl.querySelector('.speak-msg-btn');
+                if (speakBtn) {
+                    speakBtn.onclick = () => speakText(content, speakBtn);
+                }
+            }
+
             if (state.settings.stream && response.body) {
                 // Remove thinking indicator
                 bubbleEl.innerHTML = '<span class="streaming-cursor"></span>';
@@ -579,38 +610,66 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder('utf-8');
                 let buffer = '';
+                let isStreamDone = false;
 
-                while (true) {
+                while (!isStreamDone) {
                     const { done, value } = await reader.read();
                     if (done) break;
 
                     buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n\n');
-                    buffer = lines.pop(); // Keep unfinished chunk
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // Keep unfinished line in buffer
 
                     for (const line of lines) {
                         const trimmed = line.trim();
+                        if (!trimmed || trimmed.startsWith(':')) continue;
                         if (!trimmed.startsWith('data:')) continue;
-                        const dataStr = trimmed.replace('data:', '').trim();
-                        if (dataStr === '[DONE]') continue;
+                        const dataStr = trimmed.replace(/^data:\s*/, '').trim();
+                        if (dataStr === '[DONE]') {
+                            isStreamDone = true;
+                            break;
+                        }
 
+                        let parsed;
                         try {
-                            const parsed = JSON.parse(dataStr);
-                            if (parsed.error) {
-                                throw new Error(parsed.error);
-                            }
-                            if (parsed.content) {
-                                accumulated += parsed.content;
-                                botMsg.content = accumulated;
-                                bubbleEl.innerHTML = parseMarkdown(accumulated) + '<span class="streaming-cursor"></span>';
-                                bindCodeCopyButtons(bubbleEl);
-                                scrollToBottom();
-                            }
+                            parsed = JSON.parse(dataStr);
                         } catch (pe) {
                             // Non-json chunk or partial
+                            continue;
+                        }
+
+                        if (parsed.error) {
+                            throw new Error(parsed.error);
+                        }
+                        if (parsed.content) {
+                            accumulated += parsed.content;
+                            botMsg.content = accumulated;
+                            bubbleEl.innerHTML = parseMarkdown(accumulated) + '<span class="streaming-cursor"></span>';
+                            bindCodeCopyButtons(bubbleEl);
+                            scrollToBottom();
                         }
                     }
                 }
+
+                if (!isStreamDone && buffer.trim()) {
+                    const trimmed = buffer.trim();
+                    if (trimmed.startsWith('data:')) {
+                        const dataStr = trimmed.replace(/^data:\s*/, '').trim();
+                        if (dataStr !== '[DONE]') {
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                if (parsed.content) {
+                                    accumulated += parsed.content;
+                                    botMsg.content = accumulated;
+                                }
+                            } catch (_) {}
+                        }
+                    }
+                }
+
+                try {
+                    await reader.cancel();
+                } catch (_) {}
 
                 // Finalize content
                 bubbleEl.innerHTML = parseMarkdown(accumulated);
@@ -623,38 +682,16 @@
             }
 
             // Update metadata row
-            const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            metaEl.innerHTML = `
-                <span>${escapeHtml(state.activeModelName)}</span>
-                <span>•</span>
-                <span>${timeString}</span>
-                <div class="message-actions">
-                    <button class="msg-action-btn copy-msg-btn" title="Copy text" aria-label="Copy message text">
-                        <i class="fa-regular fa-copy"></i>
-                    </button>
-                    <button class="msg-action-btn speak-msg-btn" title="Read aloud" aria-label="Read message aloud">
-                        <i class="fa-solid fa-volume-high"></i>
-                    </button>
-                </div>
-            `;
-            const copyBtn = metaEl.querySelector('.copy-msg-btn');
-            copyBtn.onclick = () => {
-                navigator.clipboard.writeText(botMsg.content);
-                copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                showToast('Copied to clipboard', 'success');
-                setTimeout(() => { copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>'; }, 2000);
-            };
-
-            const speakBtn = metaEl.querySelector('.speak-msg-btn');
-            speakBtn.onclick = () => speakText(botMsg.content, speakBtn);
-
+            updateMessageMeta(metaEl, botMsg.content);
             saveChatsToStorage();
 
         } catch (err) {
             if (err.name === 'AbortError') {
                 showToast('Generation cancelled by user', 'info');
-                bubbleEl.innerHTML += '<p><em>[Generation stopped]</em></p>';
-                botMsg.content += ' [Generation stopped]';
+                const baseText = botMsg.content || '';
+                bubbleEl.innerHTML = parseMarkdown(baseText) + '<p><em>[Generation stopped]</em></p>';
+                bindCodeCopyButtons(bubbleEl);
+                botMsg.content = baseText ? `${baseText}\n\n[Generation stopped]` : '[Generation stopped]';
             } else {
                 console.error('Chat error:', err);
                 bubbleEl.innerHTML = `
@@ -666,6 +703,7 @@
                 botMsg.content = `Error: ${err.message}`;
                 showToast(err.message, 'error');
             }
+            updateMessageMeta(metaEl, botMsg.content);
             saveChatsToStorage();
         } finally {
             setStreamingState(false);

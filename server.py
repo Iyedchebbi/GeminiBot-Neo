@@ -226,7 +226,7 @@ class GeminiBotHandler(SimpleHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")
                 self.send_header("Cache-Control", "no-cache")
-                self.send_header("Connection", "keep-alive")
+                self.send_header("Connection", "close")
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
 
@@ -253,6 +253,8 @@ class GeminiBotHandler(SimpleHTTPRequestHandler):
                     self.wfile.write(f"data: {err_msg}\n\n".encode("utf-8"))
                     self.wfile.write(b"data: [DONE]\n\n")
                     self.wfile.flush()
+                finally:
+                    self.close_connection = True
                 return
             else:
                 try:
