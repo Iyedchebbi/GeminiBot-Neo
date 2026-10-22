@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GeminiBot Neo - An immersive, next-generation AI chat workspace featuring real-time streaming, free high-intelligence models, and premium glassmorphic UI.">
+    <title>GeminiBot Neo — Next-Gen AI Workspace</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-background">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="glow-orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <div class="app-container" id="appContainer">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <i class="fa-solid fa-sparkles"></i>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">GeminiBot</span>
+                        <span class="brand-badge">NEO</span>
+                    </div>
+                </div>
+                <button class="icon-btn close-sidebar-btn" id="closeSidebarBtn" title="Collapse Sidebar" aria-label="Collapse Sidebar">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+            </div>
+
+            <div class="sidebar-actions">
+                <button class="new-chat-btn" id="newChatBtn">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>New Chat</span>
+                </button>
+            </div>
+
+            <div class="sidebar-search">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="chatSearchInput" placeholder="Search conversations..." aria-label="Search conversations">
+            </div>
+
+            <div class="chat-history-container" id="chatHistoryList">
+                <!-- Dynamically populated chat session list -->
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="api-status-card" id="apiStatusCard">
+                    <div class="status-indicator">
+                        <span class="status-dot" id="statusDot"></span>
+                        <span class="status-text" id="statusText">Checking API...</span>
+                    </div>
+                    <span class="status-model-badge" id="sidebarModelBadge">Nvidia Nemotron 550B</span>
+                </div>
+                <div class="sidebar-footer-links">
+                    <button class="footer-btn" id="openSettingsBtn" title="Settings" aria-label="Settings">
+                        <i class="fa-solid fa-gear"></i>
+                        <span>Settings</span>
+                    </button>
+                    <button class="footer-btn" id="clearAllChatsBtn" title="Clear All History" aria-label="Clear All History">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Clear All</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main" id="chatMain">
+            <!-- Top Navigation Bar -->
+            <header class="top-navbar" id="topNavbar">
+                <div class="navbar-left">
+                    <button class="icon-btn toggle-sidebar-btn" id="toggleSidebarBtn" title="Toggle Sidebar" aria-label="Toggle Sidebar">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="current-chat-meta">
+                        <h1 class="chat-title" id="currentChatTitle">New Conversation</h1>
+                        <span class="chat-subtitle" id="chatSubtitle">Next-Generation AI Interface</span>
+                    </div>
+                </div>
+
+                <div class="navbar-right">
+                    <!-- Model Selector Trigger -->
+                    <button class="model-picker-btn" id="modelPickerBtn" title="Change AI Model" aria-label="Select AI Model">
+                        <div class="model-picker-info">
+                            <span class="model-picker-label">ACTIVE MODEL</span>
+                            <span class="model-picker-name" id="currentModelDisplay">Nvidia Nemotron 3 Ultra</span>
+                        </div>
+                        <span class="model-free-tag" id="currentModelTag">FREE</span>
+                        <i class="fa-solid fa-chevron-down model-chevron"></i>
+                    </button>
+
+                    <!-- Export Dropdown Trigger -->
+                    <div class="dropdown-wrapper">
+                        <button class="icon-btn" id="exportBtn" title="Export Conversation" aria-label="Export Conversation">
+                            <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                        </button>
+                        <div class="dropdown-menu" id="exportDropdown">
+                            <button class="dropdown-item" id="exportMarkdownBtn">
+                                <i class="fa-solid fa-file-code"></i>
+                                <span>Export as Markdown (.md)</span>
+                            </button>
+                            <button class="dropdown-item" id="exportJsonBtn">
+                                <i class="fa-solid fa-file-lines"></i>
+                                <span>Export as JSON (.json)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Settings Trigger -->
+                    <button class="icon-btn" id="topSettingsBtn" title="Settings" aria-label="Open Settings">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Scrollable Messages Area -->
+            <div class="messages-container" id="messagesContainer">
+                <!-- Welcome Hero (shown when no messages) -->
+                <div class="welcome-hero" id="welcomeHero">
+                    <div class="hero-orbit">
+                        <div class="orbit-center">
+                            <i class="fa-solid fa-bolt-lightning hero-icon"></i>
+                        </div>
+                        <div class="orbit-ring ring-1"></div>
+                        <div class="orbit-ring ring-2"></div>
+                    </div>
+                    <h2 class="hero-title">Experience <span class="gradient-text">GeminiBot Neo</span></h2>
+                    <p class="hero-description">
+                        Supercharged conversational intelligence powered by high-performance models and real-time streaming.
+                    </p>
+
+                    <!-- Starter Prompt Cards -->
+                    <div class="prompt-starters-grid">
+                        <button class="starter-card" data-prompt="Explain quantum computing like I'm five years old with vivid real-world analogies.">
+                            <div class="starter-icon" style="--card-color: #00f0ff;">
+                                <i class="fa-solid fa-atom"></i>
+                            </div>
+                            <div class="starter-content">
+                                <div class="starter-title">Explain Quantum Computing</div>
+                                <div class="starter-subtitle">Break down qubits and superposition simply</div>
+                            </div>
+                            <i class="fa-solid fa-arrow-right starter-arrow"></i>
+                        </button>
+
+                        <button class="starter-card" data-prompt="Write a production-ready Python FastAPI script with async endpoints, Pydantic models, and clean error handling.">
+                            <div class="starter-icon" style="--card-color: #8a2be2;">
+                                <i class="fa-solid fa-code"></i>
+                            </div>
+                            <div class="starter-content">
+                                <div class="starter-title">Architect a Modern API</div>
+                                <div class="starter-subtitle">Python FastAPI with async endpoints & Pydantic</div>
+                            </div>
+                            <i class="fa-solid fa-arrow-right starter-arrow"></i>
+                        </button>
+
+                        <button class="starter-card" data-prompt="Write a gripping cyberpunk flash fiction scene set in Neo-Tokyo in the year 2088 during a rainstorm.">
+                            <div class="starter-icon" style="--card-color: #ff007f;">
+                                <i class="fa-solid fa-feather-pointed"></i>
+                            </div>
+                            <div class="starter-content">
+                                <div class="starter-title">Atmospheric Sci-Fi Story</div>
+                                <div class="starter-subtitle">Cyberpunk scene in Neo-Tokyo 2088</div>
+                            </div>
+                            <i class="fa-solid fa-arrow-right starter-arrow"></i>
+                        </button>
+
+                        <button class="starter-card" data-prompt="What are 5 actionable strategies to optimize web application performance for sub-second page loads?">
+                            <div class="starter-icon" style="--card-color: #00e676;">
+                                <i class="fa-solid fa-gauge-high"></i>
+                            </div>
+                            <div class="starter-content">
+                                <div class="starter-title">Web Performance Masterclass</div>
+                                <div class="starter-subtitle">Techniques for sub-second page speed</div>
+                            </div>
+                            <i class="fa-solid fa-arrow-right starter-arrow"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages List -->
+                <div class="messages-list" id="messagesList"></div>
+            </div>
+
+            <!-- Bottom Floating Input Area -->
+            <div class="chat-input-wrapper">
+                <div class="chat-input-container">
+                    <!-- Stop Generation Floating Button (Active during stream) -->
+                    <button class="stop-stream-btn hidden" id="stopStreamBtn" title="Stop generating">
+                        <i class="fa-solid fa-square"></i>
+                        <span>Stop Generating</span>
+                    </button>
+
+                    <div class="input-box-wrapper">
+                        <!-- Dictation / Mic Button -->
+                        <button class="input-tool-btn mic-btn" id="micBtn" title="Voice Dictation (Speech-to-Text)" aria-label="Speech to Text">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+
+                        <!-- Expanding Textarea -->
+                        <textarea 
+                            id="messageInput" 
+                            rows="1" 
+                            placeholder="Message GeminiBot Neo... (Shift+Enter for newline)"
+                            aria-label="Your message to AI"
+                        ></textarea>
+
+                        <!-- Action Buttons -->
+                        <div class="input-actions">
+                            <button class="send-btn" id="sendBtn" title="Send message" aria-label="Send message">
+                                <i class="fa-solid fa-arrow-up"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="input-footer-hint">
+                        <span>GeminiBot Neo can make mistakes. Verify critical facts. Free tier enabled.</span>
+                        <div class="keyboard-hints">
+                            <kbd>Enter</kbd> to send <span class="dot-separator">•</span> <kbd>Shift + Enter</kbd> for line break
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Model Selector Modal -->
+    <div class="modal-backdrop hidden" id="modelModal">
+        <div class="modal-box model-modal-box">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <i class="fa-solid fa-brain-circuit modal-title-icon"></i>
+                    <div>
+                        <h3 class="modal-title">Select AI Model</h3>
+                        <p class="modal-subtitle">Pick from high-speed free models or connect your preferred engine</p>
+                    </div>
+                </div>
+                <button class="icon-btn modal-close-btn" id="closeModelModalBtn" aria-label="Close modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="modal-search-bar">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="modelSearchInput" placeholder="Filter models by name or category...">
+            </div>
+
+            <div class="model-category-chips" id="modelCategoryChips">
+                <button class="filter-chip active" data-category="All">All</button>
+                <button class="filter-chip" data-category="Popular">Popular</button>
+                <button class="filter-chip" data-category="Google">Google</button>
+                <button class="filter-chip" data-category="Coding">Coding</button>
+                <button class="filter-chip" data-category="Vision">Vision</button>
+                <button class="filter-chip" data-category="Fast">Fast</button>
+            </div>
+
+            <div class="models-grid" id="modelsGrid">
+                <!-- Dynamically populated model cards -->
+            </div>
+
+            <div class="custom-model-bar">
+                <label for="customModelInput">Or enter custom OpenRouter model ID:</label>
+                <div class="custom-model-input-group">
+                    <input type="text" id="customModelInput" placeholder="e.g. meta-llama/llama-3.3-70b-instruct:free">
+                    <button class="btn btn-secondary" id="applyCustomModelBtn">Use Model</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-backdrop hidden" id="settingsModal">
+        <div class="modal-box settings-modal-box">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <i class="fa-solid fa-sliders modal-title-icon"></i>
+                    <div>
+                        <h3 class="modal-title">Settings & Configuration</h3>
+                        <p class="modal-subtitle">Tune behavior, API keys, and model parameters</p>
+                    </div>
+                </div>
+                <button class="icon-btn modal-close-btn" id="closeSettingsModalBtn" aria-label="Close modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="modal-body settings-body">
+                <!-- API Key Section -->
+                <div class="settings-section">
+                    <label class="settings-label" for="apiKeyInput">
+                        <span>OpenRouter API Key</span>
+                        <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" class="link-small">Get Free Key <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    </label>
+                    <div class="password-input-wrap">
+                        <input type="password" id="apiKeyInput" placeholder="sk-or-v1-..." autocomplete="off">
+                        <button class="icon-btn toggle-pwd-btn" id="toggleApiKeyVisibility" title="Toggle visibility" aria-label="Toggle visibility">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    <span class="settings-tip">Stored securely in your local <code>.env</code> file. Never sent anywhere else.</span>
+                </div>
+
+                <!-- System Instruction Section -->
+                <div class="settings-section">
+                    <label class="settings-label" for="systemPromptInput">
+                        <span>System Instruction (Persona)</span>
+                    </label>
+                    <textarea id="systemPromptInput" rows="3" placeholder="You are an intelligent, helpful, and creative AI assistant called GeminiBot..."></textarea>
+                    <span class="settings-tip">Guides the AI's personality, tone of voice, and default formatting rules.</span>
+                </div>
+
+                <!-- Temperature Slider -->
+                <div class="settings-section">
+                    <div class="slider-header">
+                        <label class="settings-label" for="temperatureSlider">
+                            <span>Creativity Temperature</span>
+                        </label>
+                        <span class="slider-value-badge" id="tempValueDisplay">0.7</span>
+                    </div>
+                    <input type="range" id="temperatureSlider" min="0" max="1.5" step="0.05" value="0.7">
+                    <div class="slider-ticks">
+                        <span>Precise (0.0)</span>
+                        <span>Balanced (0.7)</span>
+                        <span>Imaginative (1.5)</span>
+                    </div>
+                </div>
+
+                <!-- Response Streaming Toggle -->
+                <div class="settings-section switch-section">
+                    <div class="switch-info">
+                        <span class="switch-title">Stream Responses in Real Time</span>
+                        <span class="switch-desc">Words stream dynamically as the model generates them</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="streamToggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelSettingsBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveSettingsBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

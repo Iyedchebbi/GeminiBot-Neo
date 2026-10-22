@@ -88,10 +88,12 @@ def get_client():
         api_key=api_key,
     )
 
+STATIC_DIR = BASE_DIR / "public" if (BASE_DIR / "public").exists() else BASE_DIR / "web"
+
 class GeminiBotHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         if "directory" not in kwargs:
-            kwargs["directory"] = str(BASE_DIR / "web")
+            kwargs["directory"] = str(STATIC_DIR)
         super().__init__(*args, **kwargs)
 
     def log_message(self, format, *args):
@@ -118,6 +120,11 @@ class GeminiBotHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_HEAD(self):
+        if self.path.startswith("/web/"):
+            self.path = self.path[4:]
+        elif self.path.startswith("/public/"):
+            self.path = self.path[7:]
+
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
@@ -128,6 +135,11 @@ class GeminiBotHandler(SimpleHTTPRequestHandler):
         return super().do_HEAD()
 
     def do_GET(self):
+        if self.path.startswith("/web/"):
+            self.path = self.path[4:]
+        elif self.path.startswith("/public/"):
+            self.path = self.path[7:]
+
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 

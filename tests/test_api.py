@@ -59,6 +59,13 @@ class TestGeminiBot(unittest.TestCase):
         data = json.loads(v_config.read_text(encoding="utf-8"))
         self.assertIn("rewrites", data)
 
+    def test_static_assets(self):
+        """Verify public static assets exist for Vercel CDN deployment."""
+        public_dir = ROOT_DIR / "public"
+        self.assertTrue((public_dir / "index.html").exists(), "public/index.html must exist")
+        self.assertTrue((public_dir / "style.css").exists(), "public/style.css must exist")
+        self.assertTrue((public_dir / "app.js").exists(), "public/app.js must exist")
+
 if __name__ == "__main__":
     unittest.main()
 
