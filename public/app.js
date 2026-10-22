@@ -15,6 +15,7 @@
         chats: [],
         currentChatId: null,
         models: [],
+        selectedModels: [],
         activeModel: "nvidia/nemotron-3-ultra-550b-a55b:free",
         activeModelBadge: "FREE",
         activeModelName: "Nvidia Nemotron 3 Ultra",
@@ -76,7 +77,8 @@
         temperatureSlider: document.getElementById('temperatureSlider'),
         tempValueDisplay: document.getElementById('tempValueDisplay'),
         streamToggle: document.getElementById('streamToggle'),
-        toastContainer: document.getElementById('toastContainer')
+        toastContainer: document.getElementById('toastContainer'),
+        sidebarOverlay: document.getElementById('sidebarOverlay')
     };
 
     // --- Initialization ---
@@ -108,6 +110,10 @@
             if (storedModel) {
                 state.activeModel = storedModel;
             }
+            const storedSelected = localStorage.getItem('geminibot_neo_selected_models_v1');
+            if (storedSelected) {
+                state.selectedModels = JSON.parse(storedSelected);
+            }
         } catch (e) {
             console.warn('Failed to load settings from storage', e);
         }
@@ -117,6 +123,7 @@
         try {
             localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(state.settings));
             localStorage.setItem(STORAGE_KEY_ACTIVE_MODEL, state.activeModel);
+            localStorage.setItem('geminibot_neo_selected_models_v1', JSON.stringify(state.selectedModels));
         } catch (e) {
             console.warn('Failed to save settings to storage', e);
         }
@@ -189,7 +196,11 @@
             state.activeModelBadge = state.activeModel.includes(':free') ? 'FREE' : 'CUSTOM';
         }
         els.currentModelDisplay.textContent = state.activeModelName;
-        els.currentModelTag.textContent = state.activeModelBadge;
+        if (state.selectedModels.length > 1) {
+            els.currentModelTag.textContent = `${state.selectedModels.length} models`;
+        } else {
+            els.currentModelTag.textContent = state.activeModelBadge;
+        }
         els.sidebarModelBadge.textContent = state.activeModelName;
     }
 
@@ -220,6 +231,7 @@
         // Mobile sidebar close on selection
         if (window.innerWidth <= 768) {
             els.sidebar.classList.add('collapsed');
+            els.sidebarOverlay.classList.remove('active');
         }
     }
 
@@ -874,14 +886,19 @@
 
         filtered.forEach(m => {
             const card = document.createElement('div');
+            const isSelected = state.selectedModels.includes(m.id);
             const isActive = m.id === state.activeModel;
-            card.className = `model-card ${isActive ? 'active' : ''}`;
-            card.onclick = () => selectModel(m.id);
+            card.className = `model-card ${isActive ? 'active' : ''} ${isSelected ? 'selected' : ''}`;
 
             card.innerHTML = `
                 <div class="model-card-top">
-                    <span class="model-card-name">${escapeHtml(m.name)}</span>
-                    <span class="model-card-badge">${escapeHtml(m.badge || 'FREE')}</span>
+                    <div class="model-card-check">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <div class="model-card-top-info">
+                        <span class="model-card-name">${escapeHtml(m.name)}</span>
+                        <span class="model-card-badge">${escapeHtml(m.badge || 'FREE')}</span>
+                    </div>
                 </div>
                 <div class="model-card-desc">${escapeHtml(m.desc || 'High efficiency model')}</div>
                 <div class="model-card-footer">
@@ -889,17 +906,48 @@
                     <code>${escapeHtml(m.id.split('/').pop())}</code>
                 </div>
             `;
+
+            card.onclick = (e) => {
+                if (e.shiftKey || e.ctrlKey || e.metaKey) {
+                    toggleModelSelection(m.id);
+                } else {
+                    selectModel(m.id);
+                }
+            };
+
             els.modelsGrid.appendChild(card);
         });
     }
 
+    function toggleModelSelection(modelId) {
+        const idx = state.selectedModels.indexOf(modelId);
+        if (idx >= 0) {
+            state.selectedModels.splice(idx, 1);
+            if (state.activeModel === modelId && state.selectedModels.length > 0) {
+                state.activeModel = state.selectedModels[0];
+            }
+        } else {
+            state.selectedModels.push(modelId);
+        }
+        if (state.selectedModels.length === 0) {
+            state.selectedModels.push(modelId);
+        }
+        state.activeModel = state.selectedModels[state.selectedModels.length - 1];
+        saveSettingsToStorage();
+        updateModelDisplay();
+        renderModelsGrid(state.models);
+    }
+
     function selectModel(modelId) {
         state.activeModel = modelId;
+        if (!state.selectedModels.includes(modelId)) {
+            state.selectedModels.push(modelId);
+        }
         saveSettingsToStorage();
         updateModelDisplay();
         renderModelsGrid(state.models);
         closeModelModal();
-        showToast(`Switched model to ${state.activeModelName}`, 'success');
+        showToast(`Switched to ${state.activeModelName}`, 'success');
     }
 
     function openModelModal() {
@@ -976,8 +1024,21 @@
     // --- Event Bindings ---
     function bindEvents() {
         // Sidebar Toggle
-        els.toggleSidebarBtn.onclick = () => els.sidebar.classList.toggle('collapsed');
-        els.closeSidebarBtn.onclick = () => els.sidebar.classList.add('collapsed');
+        const toggleSidebar = () => {
+            els.sidebar.classList.toggle('collapsed');
+            if (!els.sidebar.classList.contains('collapsed') && window.innerWidth <= 768) {
+                els.sidebarOverlay.classList.add('active');
+            } else {
+                els.sidebarOverlay.classList.remove('active');
+            }
+        };
+        const closeSidebar = () => {
+            els.sidebar.classList.add('collapsed');
+            els.sidebarOverlay.classList.remove('active');
+        };
+        els.toggleSidebarBtn.onclick = toggleSidebar;
+        els.closeSidebarBtn.onclick = closeSidebar;
+        els.sidebarOverlay.onclick = closeSidebar;
 
         // New Chat
         els.newChatBtn.onclick = createNewChat;

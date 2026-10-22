@@ -43,10 +43,19 @@
     --shadow-glow-violet: 0 0 30px rgba(138, 43, 226, 0.25);
 
     /* Dimensions & Transitions */
-    --sidebar-width: 290px;
+    --sidebar-width: 280px;
     --transition-fast: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     --transition-smooth: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* Custom Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
 
 /* ==========================================================================
    Base & Reset
@@ -138,8 +147,9 @@ html, body {
     position: relative;
     z-index: 1;
     display: flex;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
 }
 
@@ -148,21 +158,30 @@ html, body {
    ========================================================================== */
 .sidebar {
     width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
     height: 100%;
     background: var(--bg-surface);
     border-right: 1px solid var(--border-subtle);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    transition: transform var(--transition-smooth), width var(--transition-smooth);
-    z-index: 20;
+    transition: margin-left var(--transition-smooth);
+    z-index: 30;
     backdrop-filter: blur(20px);
+    overflow: hidden;
 }
 
 .sidebar.collapsed {
-    transform: translateX(-100%);
-    width: 0;
-    border-right: none;
+    margin-left: calc(-1 * var(--sidebar-width));
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 25;
 }
 
 .sidebar-header {
@@ -281,7 +300,9 @@ html, body {
 .chat-history-container {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0 12px;
+    min-height: 0;
 }
 
 .history-section-title {
@@ -373,12 +394,13 @@ html, body {
 }
 
 .sidebar-footer {
-    padding: 14px 18px;
+    padding: 12px 14px;
     border-top: 1px solid var(--border-subtle);
     background: rgba(8, 12, 20, 0.4);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .api-status-card {
@@ -466,6 +488,7 @@ html, body {
    ========================================================================== */
 .chat-main {
     flex: 1;
+    min-width: 0;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -489,12 +512,15 @@ html, body {
 .navbar-left {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
 }
 
 .current-chat-meta {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .chat-title {
@@ -504,31 +530,36 @@ html, body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 320px;
 }
 
 .chat-subtitle {
     font-size: 11px;
     color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .navbar-right {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 /* Model Selector Button */
 .model-picker-btn {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border-subtle);
     border-radius: 9px;
-    padding: 6px 14px;
+    padding: 6px 12px;
     cursor: pointer;
     transition: all var(--transition-fast);
+    max-width: 260px;
+    min-width: 0;
 }
 
 .model-picker-btn:hover {
@@ -540,6 +571,7 @@ html, body {
     display: flex;
     flex-direction: column;
     text-align: left;
+    min-width: 0;
 }
 
 .model-picker-label {
@@ -553,7 +585,6 @@ html, body {
     font-size: 13px;
     font-weight: 600;
     color: var(--text-primary);
-    max-width: 170px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -567,11 +598,13 @@ html, body {
     background: rgba(16, 185, 129, 0.15);
     color: var(--accent-emerald);
     border: 1px solid rgba(16, 185, 129, 0.3);
+    flex-shrink: 0;
 }
 
 .model-chevron {
     font-size: 11px;
     color: var(--text-muted);
+    flex-shrink: 0;
 }
 
 /* Icon Buttons */
@@ -647,9 +680,11 @@ html, body {
 .messages-container {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 24px 24px 10px 24px;
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
 /* Welcome Hero */
@@ -829,6 +864,8 @@ html, body {
     flex-direction: column;
     gap: 20px;
     padding-bottom: 20px;
+    overflow-x: hidden;
+    word-break: break-word;
 }
 
 .message-row {
@@ -865,9 +902,11 @@ html, body {
 }
 
 .message-content-wrapper {
-    max-width: calc(100% - 60px);
+    max-width: calc(100% - 56px);
+    min-width: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .user-row .message-content-wrapper {
@@ -1346,11 +1385,49 @@ html, body {
 .models-grid {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0 24px 14px 24px;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    gap: 10px;
     max-height: 380px;
+}
+
+/* Multi-select model card checkmark */
+.model-card-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border-medium);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: transparent;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.model-card.active .model-card-check {
+    background: var(--accent-cyan);
+    border-color: var(--accent-cyan);
+    color: #000;
+}
+
+.model-card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.model-card-top-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
 }
 
 .model-card {
@@ -1374,20 +1451,16 @@ html, body {
 .model-card.active {
     border-color: var(--accent-cyan);
     background: rgba(0, 240, 255, 0.09);
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
-}
-
-.model-card-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 6px;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
 }
 
 .model-card-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .model-card-badge {
@@ -1397,21 +1470,35 @@ html, body {
     border-radius: 4px;
     background: rgba(16, 185, 129, 0.15);
     color: var(--accent-emerald);
+    flex-shrink: 0;
 }
 
 .model-card-desc {
-    font-size: 11.5px;
+    font-size: 11px;
     color: var(--text-muted);
     line-height: 1.4;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .model-card-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 10.5px;
+    font-size: 10px;
     color: var(--text-dim);
+    gap: 4px;
+}
+
+.model-card-footer code {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 120px;
 }
 
 .custom-model-bar {
@@ -1728,15 +1815,34 @@ input:checked + .slider.round:before {
 }
 
 /* Responsive Styles */
+@media (max-width: 900px) {
+    .model-picker-btn {
+        max-width: 180px;
+    }
+    .model-picker-label { display: none; }
+}
+
 @media (max-width: 768px) {
     .sidebar {
-        position: absolute;
+        position: fixed;
         left: 0;
         top: 0;
         bottom: 0;
-        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.6);
+        z-index: 100;
+        box-shadow: 10px 0 40px rgba(0, 0, 0, 0.7);
+        transition: transform var(--transition-smooth);
+        margin-left: 0 !important;
     }
-    
+
+    .sidebar.collapsed {
+        transform: translateX(-100%);
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+        z-index: 90;
+    }
+
     .prompt-starters-grid {
         grid-template-columns: 1fr;
     }
@@ -1745,15 +1851,82 @@ input:checked + .slider.round:before {
         grid-template-columns: 1fr;
     }
 
-    .top-navbar {
-        padding: 0 14px;
+    .modal-box {
+        width: 95%;
+        max-height: 90vh;
+        max-height: 90dvh;
+        border-radius: 14px;
     }
 
-    .chat-title {
-        max-width: 150px;
+    .top-navbar {
+        padding: 0 12px;
+        height: 56px;
     }
+
+    .model-picker-btn {
+        max-width: 140px;
+        padding: 4px 8px;
+    }
+    .model-picker-label { display: none; }
+    .model-picker-name { font-size: 12px; }
+    .model-free-tag { font-size: 9px; padding: 1px 4px; }
+    .model-chevron { display: none; }
 
     .chat-input-wrapper {
-        padding: 0 12px 12px 12px;
+        padding: 0 10px 10px 10px;
     }
+
+    .input-box-wrapper {
+        border-radius: 14px;
+        padding: 6px 8px 6px 10px;
+    }
+
+    .input-footer-hint {
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .messages-container {
+        padding: 16px 12px 8px 12px;
+    }
+
+    .hero-title {
+        font-size: 24px;
+    }
+
+    .hero-description {
+        font-size: 13px;
+        margin-bottom: 24px;
+    }
+
+    .welcome-hero {
+        padding: 10px 0 20px 0;
+    }
+
+    .icon-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 13px;
+    }
+
+    .navbar-right .icon-btn:not(.toggle-sidebar-btn):not(#topSettingsBtn) {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .model-picker-btn {
+        max-width: 110px;
+        gap: 4px;
+    }
+    .model-picker-name { font-size: 11px; }
+    .model-free-tag { display: none; }
+
+    .starter-card {
+        padding: 12px;
+    }
+    .starter-content .starter-subtitle { display: none; }
+
+    .keyboard-hints { display: none; }
 }
