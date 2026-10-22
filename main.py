@@ -15,7 +15,14 @@ elif (BASE_DIR / ".env.txt").exists():
 else:
     load_dotenv()
 
-from server import run_server, DEFAULT_MODEL, get_client
+from server import run_server, DEFAULT_MODEL, get_client, GeminiBotHandler
+
+# Vercel entrypoint compatibility
+class handler(GeminiBotHandler):
+    """Vercel entrypoint handler."""
+    pass
+
+app = handler
 
 def start_gui(port=5000):
     """Launch the GeminiBot Neo web GUI and open the browser."""

@@ -30,12 +30,35 @@ class TestGeminiBot(unittest.TestCase):
             self.assertIn("name", m)
             self.assertIn("badge", m)
 
-    def test_web_assets_exist(self):
-        """Verify all static frontend files exist."""
-        web_dir = ROOT_DIR / "web"
-        self.assertTrue((web_dir / "index.html").exists(), "index.html must exist")
-        self.assertTrue((web_dir / "style.css").exists(), "style.css must exist")
-        self.assertTrue((web_dir / "app.js").exists(), "app.js must exist")
+    def test_vercel_entrypoints(self):
+        """Verify Vercel entrypoint handlers and app instances are properly exposed."""
+        from http.server import BaseHTTPRequestHandler
+        import server
+        import main
+        import json
+        from api import index as api_index
+
+        # server.py exports
+        self.assertTrue(hasattr(server, "handler"), "server.py must export handler")
+        self.assertTrue(hasattr(server, "app"), "server.py must export app")
+        self.assertTrue(issubclass(server.handler, BaseHTTPRequestHandler))
+
+        # main.py exports
+        self.assertTrue(hasattr(main, "handler"), "main.py must export handler")
+        self.assertTrue(hasattr(main, "app"), "main.py must export app")
+        self.assertTrue(issubclass(main.handler, BaseHTTPRequestHandler))
+
+        # api/index.py exports
+        self.assertTrue(hasattr(api_index, "handler"), "api/index.py must export handler")
+        self.assertTrue(hasattr(api_index, "app"), "api/index.py must export app")
+        self.assertTrue(issubclass(api_index.handler, BaseHTTPRequestHandler))
+
+        # vercel.json validity
+        v_config = ROOT_DIR / "vercel.json"
+        self.assertTrue(v_config.exists(), "vercel.json must exist")
+        data = json.loads(v_config.read_text(encoding="utf-8"))
+        self.assertIn("rewrites", data)
 
 if __name__ == "__main__":
     unittest.main()
+

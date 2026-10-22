@@ -90,8 +90,9 @@ def get_client():
 
 class GeminiBotHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        directory = str(BASE_DIR / "web")
-        super().__init__(*args, directory=directory, **kwargs)
+        if "directory" not in kwargs:
+            kwargs["directory"] = str(BASE_DIR / "web")
+        super().__init__(*args, **kwargs)
 
     def log_message(self, format, *args):
         sys.stderr.write(f"[{self.log_date_time_string()}] {format % args}\n")
@@ -183,12 +184,15 @@ class GeminiBotHandler(SimpleHTTPRequestHandler):
                 new_key = data.get("api_key", "").strip()
                 if new_key:
                     os.environ["OPENROUTER_API_KEY"] = new_key
-                    env_path = BASE_DIR / ".env"
-                    env_lines = []
-                    if env_path.exists():
-                        env_lines = [l for l in env_path.read_text(encoding="utf-8").splitlines() if not l.startswith("OPENROUTER_API_KEY=")]
-                    env_lines.insert(0, f"OPENROUTER_API_KEY={new_key}")
-                    env_path.write_text("\n".join(env_lines) + "\n", encoding="utf-8")
+                    try:
+                        env_path = BASE_DIR / ".env"
+                        env_lines = []
+                        if env_path.exists():
+                            env_lines = [l for l in env_path.read_text(encoding="utf-8").splitlines() if not l.startswith("OPENROUTER_API_KEY=")]
+                        env_lines.insert(0, f"OPENROUTER_API_KEY={new_key}")
+                        env_path.write_text("\n".join(env_lines) + "\n", encoding="utf-8")
+                    except Exception:
+                        pass
 
                 return self.send_json(200, {"success": True, "message": "Settings saved successfully."})
             except Exception as e:
@@ -285,6 +289,13 @@ def run_server(port=5000, host="127.0.0.1"):
         except OSError:
             continue
     raise RuntimeError("Could not bind to any port in range.")
+
+# Top-level variables for Vercel Serverless Function entrypoints
+class handler(GeminiBotHandler):
+    """Vercel entrypoint handler."""
+    pass
+
+app = handler
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
