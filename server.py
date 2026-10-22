@@ -119,31 +119,48 @@ class GeminiBotHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
-    def do_HEAD(self):
-        if self.path.startswith("/web/"):
-            self.path = self.path[4:]
-        elif self.path.startswith("/public/"):
-            self.path = self.path[7:]
-
+    def get_route_path(self):
+        """Extract the logical API route from self.path, query parameters, or Vercel proxy headers."""
         parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
+        qs = urllib.parse.parse_qs(parsed.query)
 
-        if path == "/api/status":
+        # 1. Query parameter passed by Vercel rewrite (e.g. ?route=/api/chat)
+        if "route" in qs and qs["route"]:
+            r = qs["route"][0].strip()
+            return r if r.startswith("/") else f"/{r}"
+        if "path" in qs and qs["path"]:
+            p = qs["path"][0].strip()
+            return p if p.startswith("/") else f"/api/{p}"
+
+        # 2. Vercel proxy headers
+        for h in ("x-matched-path", "x-forwarded-url", "x-invoke-path"):
+            val = self.headers.get(h)
+            if val:
+                u = urllib.parse.urlparse(val).path.strip()
+                if u and not u.endswith("index.py"):
+                    return u
+
+        # 3. Direct self.path
+        p = parsed.path.strip()
+        if p.startswith("/web/"):
+            p = p[4:]
+        elif p.startswith("/public/"):
+            p = p[7:]
+        return p
+
+    def do_HEAD(self):
+        path = self.get_route_path()
+
+        if path in ("/api/status", "/status") or path.endswith("/status"):
             return self.send_json(200, {"status": "online"}, is_head=True)
-        elif path == "/api/models":
+        elif path in ("/api/models", "/models") or path.endswith("/models"):
             return self.send_json(200, {"models": []}, is_head=True)
         return super().do_HEAD()
 
     def do_GET(self):
-        if self.path.startswith("/web/"):
-            self.path = self.path[4:]
-        elif self.path.startswith("/public/"):
-            self.path = self.path[7:]
+        path = self.get_route_path()
 
-        parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
-
-        if path == "/api/status":
+        if path in ("/api/status", "/status") or path.endswith("/status"):
             api_key = os.getenv("OPENROUTER_API_KEY", "")
             has_key = bool(api_key.strip())
             masked_key = (api_key[:8] + "..." + api_key[-4:]) if len(api_key) > 12 else ("Configured" if has_key else "Missing")
@@ -155,7 +172,7 @@ class GeminiBotHandler(SimpleHTTPRequestHandler):
                 "app_name": "GeminiBot Neo"
             })
 
-        elif path == "/api/models":
+        elif path in ("/api/models", "/models") or path.endswith("/models"):
             models = list(CURATED_MODELS)
             try:
                 req = urllib.request.Request("https://openrouter.ai/api/v1/models", headers={"User-Agent": "GeminiBot/1.0"})
@@ -180,19 +197,30 @@ class GeminiBotHandler(SimpleHTTPRequestHandler):
 
             return self.send_json(200, {"models": models})
 
+        elif path in ("/api/index.py", "/api", "/api/"):
+            return self.send_json(200, {
+                "status": "online",
+                "message": "GeminiBot Neo API is active."
+            })
+
         # Static assets (HTML, CSS, JS) handled by SimpleHTTPRequestHandler
         return super().do_GET()
 
     def do_POST(self):
-        parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
+        path = self.get_route_path()
 
-        if path == "/api/settings":
+        content_len = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else ""
+        try:
+            data = json.loads(body) if body else {}
+        except Exception:
+            data = {}
+
+        is_chat = path in ("/api/chat", "/chat") or path.endswith("/chat") or ("messages" in data)
+        is_settings = (path in ("/api/settings", "/settings") or path.endswith("/settings") or ("api_key" in data)) and not ("messages" in data)
+
+        if is_settings:
             try:
-                content_len = int(self.headers.get("Content-Length", 0))
-                body = self.rfile.read(content_len).decode("utf-8")
-                data = json.loads(body) if body else {}
-
                 new_key = data.get("api_key", "").strip()
                 if new_key:
                     os.environ["OPENROUTER_API_KEY"] = new_key
@@ -210,12 +238,8 @@ class GeminiBotHandler(SimpleHTTPRequestHandler):
             except Exception as e:
                 return self.send_json(500, {"error": str(e)})
 
-        elif path == "/api/chat":
-            content_len = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(content_len).decode("utf-8")
-            try:
-                data = json.loads(body) if body else {}
-            except Exception:
+        elif is_chat:
+            if not body or not isinstance(data, dict):
                 return self.send_json(400, {"error": "Invalid JSON in request payload"})
 
             messages = data.get("messages", [])

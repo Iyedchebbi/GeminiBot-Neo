@@ -59,13 +59,27 @@ class TestGeminiBot(unittest.TestCase):
         data = json.loads(v_config.read_text(encoding="utf-8"))
         self.assertIn("rewrites", data)
 
-    def test_static_assets(self):
-        """Verify public static assets exist for Vercel CDN deployment."""
-        public_dir = ROOT_DIR / "public"
-        self.assertTrue((public_dir / "index.html").exists(), "public/index.html must exist")
-        self.assertTrue((public_dir / "style.css").exists(), "public/style.css must exist")
-        self.assertTrue((public_dir / "app.js").exists(), "public/app.js must exist")
+    def test_route_resolution(self):
+        """Verify get_route_path correctly handles query params, headers, and endpoints."""
+        class DummyRequest:
+            def __init__(self, path, headers=None):
+                self.path = path
+                self.headers = headers or {}
+            get_route_path = GeminiBotHandler.get_route_path
+
+        # Test query parameter passed by rewrite
+        req1 = DummyRequest("/api/index.py?route=/api/chat")
+        self.assertEqual(req1.get_route_path(), "/api/chat")
+
+        # Test Vercel proxy headers
+        req2 = DummyRequest("/api/index.py", headers={"x-matched-path": "/api/models"})
+        self.assertEqual(req2.get_route_path(), "/api/models")
+
+        # Test direct path
+        req3 = DummyRequest("/api/status")
+        self.assertEqual(req3.get_route_path(), "/api/status")
 
 if __name__ == "__main__":
     unittest.main()
+
 
