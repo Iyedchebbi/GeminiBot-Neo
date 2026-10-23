@@ -222,6 +222,9 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 - GitHub: [@Iyedchebbi](https://github.com/Iyedchebbi)
 
 ---
+##  Live URL
+
+https://gemini-bot-neo-vt8q.vercel.app/
 
 <div align="center">
 
